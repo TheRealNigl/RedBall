@@ -45,7 +45,7 @@ namespace RedBall
 			// Route (Bezier)
 			float directionY = player ? 1 : -1;
 			float directionX = left ? -1 : 1;
-			var moveMissileAction = new BezierBy(1.0f, new BezierConfig
+			var moveMiscsileAction = new BezierBy(1.0f, new BezierConfig
 				{
 					ControlPoint1 = new Vector3(-directionX, 2f * directionY, 0),
 					ControlPoint2 = new Vector3(RandomHelper.NextRandom(-2, 2) * directionX, 4 * directionY, 0),

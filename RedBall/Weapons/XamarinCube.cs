@@ -67,11 +67,5 @@ namespace RedBall
 			await explosionNode.RunActionsAsync(scaleBy, new DelayTime(1f));
 			explosionNode.Remove();
 		}
-
-        protected override Task OnFire(bool byPlayer)
-        {
-            base.OnFire();
-
-        }
     }
 }

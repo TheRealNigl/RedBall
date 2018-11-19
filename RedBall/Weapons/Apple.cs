@@ -34,7 +34,7 @@ namespace RedBall
 			soundSource.Gain = 0.1f;
 			soundSource.Play(Application.ResourceCache.GetSound(Assets.Sounds.Powerup));
 			base.OnHit(target, killed, bulletNode);
-			((SamplyGame)Application).OnCoinCollected();
+			//((SamplyGame)Application).OnCoinCollected();
 		}
 	}
 }

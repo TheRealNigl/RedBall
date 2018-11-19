@@ -1,14 +1,20 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Urho;
+using Urho.Actions;
+using Urho.Gui;
 using Urho.Physics;
 using Urho.Shapes;
 
 namespace RedBall
 {
-    public class RedBallGame: Application
+    public class RedBallGame : Application
     {
+        const string CoinstFormat = "{0} coins";
+
+        int coins;
         Scene scene;
+        Text coinsText;
 
         public Player Player { get; private set; }
 
@@ -34,21 +40,14 @@ namespace RedBall
         {
             base.Start();
             CreateScene();
+            Input.KeyDown+=(e =>
+            {
+                if (e.Key == Key.Esc) Exit();
+                if (e.Key == Key.C) AddCollisionDebugBox(scene, true);
+                if (e.Key == Key.V) AddCollisionDebugBox(scene, false);
+            });
         }
 
-        /// <summary>
-        /// Adds the collision debug box.
-        /// Implement the function below to the start for a Collision Debug Box
-        ///Input.KeyDown+=(e =>
-        ///    {
-        ///        if (e.Key == Key.Esc) Exit();
-        ///        if (e.Key == Key.C) AddCollisionDebugBox(scene, true);
-        ///        if (e.Key == Key.V) AddCollisionDebugBox(scene, false);
-        ///});
-        /// </summary>
-        /// <param name="">Root node.</param>
-        /// <param name="">If set to <c>true</c> add.</param>
-        /* Along with uncommenting the function
         static void AddCollisionDebugBox(Node rootNode, bool add)
         {
             var nodes = rootNode.GetChildrenWithComponent<CollisionShape>(true);
@@ -62,21 +61,6 @@ namespace RedBall
                 subNode.Scale = node.GetComponent<CollisionShape>().WorldBoundingBox.Size;
                 box.Color = new Color(Color.Red, 0.4f);
             }
-        }
-        */
-
-        async Task StartGame()
-        {
-            // Create the player
-            Player = new Player();
-            // add the aircraft component in Node form then add to the Octree of the scene
-            var aircraftNode = scene.CreateChild(nameof(Aircraft));
-            // Add the player as a component to the Node
-            aircraftNode.AddComponent(Player);
-            var playersLife = Player.Play();
-            await playersLife;
-            // After the playersLife is gone then remove the aircraft
-            aircraftNode.Remove();
         }
 
         async void CreateScene()
@@ -106,11 +90,17 @@ namespace RedBall
             var zone = zoneNode.CreateComponent<Zone>();
             zone.SetBoundingBox(new BoundingBox(-300.0f, 300.0f));
             zone.AmbientColor = new Color(1f, 1f, 1f);
-            
-            // Background creation and addition to Octree
+
+            // UI
+            coinsText = new Text();
+            coinsText.HorizontalAlignment = HorizontalAlignment.Right;
+            coinsText.SetFont(ResourceCache.GetFont(Assets.Fonts.Font), Graphics.Width / 20);
+            UI.Root.AddChild(coinsText);
+            Input.SetMouseVisible(true, false);
+
+            // Background
             var background = new Background();
             scene.AddComponent(background);
-            // Initialize the Background
             background.Start();
 
             // Lights:
@@ -126,9 +116,52 @@ namespace RedBall
                 await startMenu.ShowStartMenu(!firstCycle); //wait for "start"
                 startMenu.Remove();
                 await StartGame();
-                // Players death calls for first life cycle false
                 firstCycle = false;
             }
+        }
+
+        async Task StartGame()
+        {
+            UpdateCoins(0);
+            Player = new Player();
+            var aircraftNode = scene.CreateChild(nameof(Aircraft));
+            aircraftNode.AddComponent(Player);
+            var playersLife = Player.Play();
+            Enemies enemies = new Enemies(Player);
+            scene.AddComponent(enemies);
+            SpawnCoins();
+            enemies.StartSpawning();
+            await playersLife;
+            enemies.KillAll();
+            aircraftNode.Remove();
+        }
+
+        async void SpawnCoins()
+        {
+            var player = Player;
+            while (Player.IsAlive && player == Player)
+            {
+                var coinNode = scene.CreateChild();
+                coinNode.Position = new Vector3(RandomHelper.NextRandom(-2.5f, 2.5f), 5f, 0);
+                var coin = new Apple();
+                coinNode.AddComponent(coin);
+                await coin.FireAsync(false);
+                await scene.RunActionsAsync(new DelayTime(3f));
+                coinNode.Remove();
+            }
+        }
+
+        public void OnCoinCollected() => UpdateCoins(coins + 1);
+
+        void UpdateCoins(int amount)
+        {
+            if (amount % 5 == 0 && amount > 0)
+            {
+                // give player a MassMachineGun each time he earns 5 coins
+                Player.Node.AddComponent(new MassMachineGun());
+            }
+            coins = amount;
+            coinsText.Value = string.Format(CoinstFormat, coins);
         }
     }
 }
